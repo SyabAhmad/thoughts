@@ -1,97 +1,234 @@
-import { MESSAGE_STATUS } from '@/services/DatabaseService';
-import { StyleSheet, Text, View } from 'react-native';
+import { MESSAGE_STATUS } from '@/services/AsyncStorageService';
+import React, { useState } from 'react';
+import {
+  Alert,
+  Animated,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from 'react-native';
 
-export default function ChatMessage({ text, timestamp, status = 'sent', isOutgoing = true }) {
-  // Render message status indicator (ticks)
-  const renderStatus = () => {
-    if (status === MESSAGE_STATUS.SENDING) {
-      return <Text style={styles.pending}>●</Text>; // or spinner
-    } else if (status === MESSAGE_STATUS.SENT) {
-      // Single tick (sent)
-      return <Text style={styles.tickGray}>✓</Text>;
-    } else if (status === MESSAGE_STATUS.SAVED || status === MESSAGE_STATUS.READ) {
-      // Double ticks (saved/read) - render side-by-side using flexRow
-      return (
-        <View style={styles.doubleTicks}>
-          <Text style={styles.tickBlue}>✓</Text>
-          <Text style={styles.tickBlue}>✓</Text>
-        </View>
-      );
-    } else if (status === MESSAGE_STATUS.DELIVERED) {
-      // Double gray ticks (delivered) - render side-by-side
-      return (
-        <View style={styles.doubleTicks}>
-          <Text style={styles.tickGray}>✓</Text>
-          <Text style={styles.tickGray}>✓</Text>
-        </View>
-      );
+interface ChatMessageProps {
+  text: string;
+  timestamp: string;
+  status?: 'sent' | 'delivered' | 'read';
+  isOutgoing?: boolean;
+  id: string | number;
+  onDelete?: (id: string | number) => void;
+}
+
+export default function ChatMessage({ 
+  text, 
+  timestamp, 
+  status = 'sent', 
+  isOutgoing = true,
+  id,
+  onDelete
+}: ChatMessageProps) {
+  const [showOptions, setShowOptions] = useState(false);
+  const [lastTap, setLastTap] = useState<number | null>(null);
+  const fadeAnim = useState(new Animated.Value(0))[0];
+
+  const handlePress = () => {
+    const now = Date.now();
+    if (lastTap && now - lastTap < 300) {
+      // Double tap detected
+      handleDoubleTap();
+      setLastTap(null);
+    } else {
+      setLastTap(now);
     }
-    return null;
+  };
+
+  const handleDoubleTap = () => {
+    setShowOptions(true);
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handleDelete = () => {
+    // First, log to verify it's being called
+    console.log("Delete pressed for message:", id);
+    
+    Alert.alert(
+      "Delete Message",
+      "Are you sure you want to delete this message?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        { 
+          text: "Delete", 
+          onPress: () => {
+            console.log("Confirmed delete for message ID:", id);
+            // Make sure onDelete is defined before calling it
+            if (onDelete) {
+              onDelete(id);
+            } else {
+              console.error("onDelete function is not defined");
+            }
+            setShowOptions(false);
+          },
+          style: "destructive"
+        }
+      ]
+    );
+  };
+
+  const closeOptions = () => {
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => setShowOptions(false));
+  };
+
+  const getStatusIcon = () => {
+  switch (status) {
+    case MESSAGE_STATUS.SENDING:
+      return '🍂'; // Falling leaf for sending (in progress)
+    case MESSAGE_STATUS.SENT:
+      return '🍃'; // Light green leaf for sent
+    case MESSAGE_STATUS.SAVED:
+    case MESSAGE_STATUS.DELIVERED:
+      return '🍁'; // Orange/red leaf for delivered
+    case MESSAGE_STATUS.READ:
+      return '🌳'; // Tree emoji for read (burning/seen)
+    default:
+      return '🍃';
+  }
+};
+
+  // Get status icon
+  // const getStatusIcon = () => {
+  //   switch (status) {
+  //     case MESSAGE_STATUS.SENDING:
+  //       return '🕐'; // Clock icon for sending
+  //     case MESSAGE_STATUS.SENT:
+  //       return '✓'; // Single tick for sent
+  //     case MESSAGE_STATUS.SAVED:
+  //     case MESSAGE_STATUS.DELIVERED:
+  //       return '✓✓'; // Double tick for delivered
+  //     case MESSAGE_STATUS.READ:
+  //       return '💙✓✓'; // Blue double tick for read
+  //     default:
+  //       return '✓';
+  //   }
+  // };
+
+  // Format timestamp to show only time for today's messages
+  const formatTimestamp = (timestamp: string) => {
+    if (!timestamp) return '';
+    
+    const messageDate = new Date(timestamp);
+    const now = new Date();
+    
+    // Check if the message is from today
+    if (messageDate.toDateString() === now.toDateString()) {
+      // Return only time for today's messages (12-hour format with AM/PM)
+      return messageDate.toLocaleTimeString([], { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: true 
+      });
+    }
+    
+    // Return short date + time for older messages
+    return messageDate.toLocaleString([], {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
   };
 
   return (
-    <View style={[styles.bubble, isOutgoing ? styles.outgoing : styles.incoming]}>
-      <Text style={styles.text}>{text}</Text>
-      <View style={styles.metadata}>
-        <Text style={styles.timestamp}>{timestamp}</Text>
-        <View style={styles.statusContainer}>{renderStatus()}</View>
+    <TouchableOpacity
+      style={[
+        styles.messageContainer,
+        isOutgoing ? styles.outgoingMessage : styles.incomingMessage,
+      ]}
+      onLongPress={() => onDelete?.(id)}
+      delayLongPress={500}
+    >
+      <Text style={[
+        styles.messageText,
+        isOutgoing ? styles.outgoingText : styles.incomingText,
+      ]}>
+        {text}
+      </Text>
+      <View style={styles.messageFooter}>
+        <Text style={[
+          styles.timestamp,
+          isOutgoing ? styles.outgoingTimestamp : styles.incomingTimestamp,
+        ]}>
+          {formatTimestamp(timestamp)}
+        </Text>
+        {isOutgoing && (
+          <Text style={styles.statusIcon}>
+            {getStatusIcon()}
+          </Text>
+        )}
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  bubble: {
+  messageContainer: {
     maxWidth: '80%',
-    padding: 12,
-    borderRadius: 8,
+    minWidth: 120,
     marginVertical: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
   },
-  outgoing: {
+  outgoingMessage: {
     alignSelf: 'flex-end',
-    backgroundColor: '#dcf8c6', // WhatsApp green for outgoing
-    marginLeft: 40,
+    backgroundColor: '#dcf8c6', // WhatsApp green bubble
+    borderTopRightRadius: 4,
   },
-  incoming: {
+  incomingMessage: {
     alignSelf: 'flex-start',
-    backgroundColor: 'white',
-    marginRight: 40,
+    backgroundColor: '#ffffff',
+    borderTopLeftRadius: 4,
   },
-  text: {
+  messageText: {
     fontSize: 16,
+    color: '#000',
   },
-  metadata: {
+  outgoingText: {
+    color: '#000',
+  },
+  incomingText: {
+    color: '#000',
+  },
+  messageFooter: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
     alignItems: 'center',
     marginTop: 4,
   },
   timestamp: {
-    fontSize: 11,
-    color: '#7f8c8d',
+    fontSize: 12,
+    color: '#7e7e7e',
     marginRight: 4,
   },
-  statusContainer: {
-    minWidth: 20,
-    alignItems: 'flex-end',
-    justifyContent: 'center',
+  outgoingTimestamp: {
+    color: '#7e7e7e',
   },
-  tickGray: {
-    color: '#7f8c8d',
+  incomingTimestamp: {
+    color: '#7e7e7e',
+  },
+  statusIcon: {
     fontSize: 12,
-  },
-  tickBlue: {
-    color: '#34b7f1', // WhatsApp blue
-    fontSize: 12,
-  },
-  pending: {
-    color: '#7f8c8d',
-    fontSize: 9,
-  },
-  // New style for side-by-side ticks
-  doubleTicks: {
-    flexDirection: 'row', // Side by side
-    alignItems: 'center',
-    justifyContent: 'flex-end',
+    marginLeft: 4,
+    color: '#666',
   },
 });

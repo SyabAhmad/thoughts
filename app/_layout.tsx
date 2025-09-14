@@ -1,12 +1,10 @@
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { createUser, getUser, initDatabase } from '@/services/DatabaseService';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 import 'react-native-reanimated';
-
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { createUser, getUser, initDatabase } from '@/services/DatabaseService';
-
 export const unstable_settings = {
   anchor: '(tabs)',
 };
@@ -22,7 +20,7 @@ export default function RootLayout() {
         // Ensure default user exists
         const user = await getUser(1);
         if (!user) {
-          await createUser('You', 'About you', 'subtitle', 'https://i.pravatar.cc/150?img=12');
+          await createUser('MenteE', 'Beloved MenteE', '🫀', 'https://i.pravatar.cc/150?img=5');
         }
       } catch (error) {
         console.error('Database initialization error:', error);

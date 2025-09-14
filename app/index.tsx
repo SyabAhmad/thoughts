@@ -1,22 +1,41 @@
 // app/index.tsx
-import { Audio } from 'expo-av';
-import { useEffect, useRef, useState } from 'react';
-import { KeyboardAvoidingView, StatusBar, StyleSheet, View } from 'react-native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
 import ChatHeader from '@/components/ChatHeader';
 import ChatMessage from '@/components/ChatMessageProps';
 import MessageInput from '@/components/MessageInputProps';
-import { getAllMessages, MESSAGE_STATUS, sendMessage } from '@/services/DatabaseService';
+import { deleteMessage, getAllMessages, getDatabaseInfo, initStorage, MESSAGE_STATUS, onMessageStatusChange, sendMessage } from '@/services/AsyncStorageService';
+import { Audio } from 'expo-av';
+import { useEffect, useRef, useState } from 'react';
+import { FlatList, KeyboardAvoidingView, Platform, StatusBar, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
   const [messages, setMessages] = useState<any[]>([]);
-  const scrollViewRef = useRef<KeyboardAwareScrollView>(null);
+  const scrollViewRef = useRef<FlatList>(null);
   const insets = useSafeAreaInsets();
 
   // Initialize database and load messages
   useEffect(() => {
+    const checkDatabase = async () => {
+      const dbInfo = getDatabaseInfo();
+      console.log('Storage Info:', dbInfo);
+      
+      await initStorage();
+      console.log('✅ AsyncStorage initialized - data will persist!');
+      
+      // Set up status change listener
+      onMessageStatusChange((messageId, status) => {
+        console.log(`Status change received: Message ${messageId} -> ${status}`);
+        setMessages(prev => 
+          prev.map(msg => 
+            msg.id === messageId 
+              ? { ...msg, status } 
+              : msg
+          )
+        );
+      });
+    };
+    
+    checkDatabase();
     loadMessages();
   }, []);
 
@@ -33,6 +52,7 @@ export default function HomeScreen() {
     try {
       const storedMessages = await getAllMessages();
       setMessages(storedMessages);
+      console.log('Messages loaded:', storedMessages.length);
     } catch (error) {
       console.log('Error loading messages:', error);
     }
@@ -49,58 +69,97 @@ export default function HomeScreen() {
       id: tempId,
       text,
       timestamp,
-      status: MESSAGE_STATUS.SENT,
+      status: MESSAGE_STATUS.SENDING, // Start with 'sending'
     };
 
     // add optimistic message to UI
     setMessages(prev => [...prev, optimisticMessage]);
     
-    // Scroll to the new message
-    setTimeout(() => {
-      scrollViewRef.current?.scrollToEnd({ animated: true });
-    }, 100);
-
+    // Play message sent sound
+    playMessageSound();
+    
     try {
-      // Use sendMessage instead of saveMessage (this properly handles sent → saved transition)
+      // Use sendMessage which returns initial message with 'sent' status
       const result = await sendMessage(text, 1);
       
-      // Replace optimistic message with the result (which has status=saved)
+      // Replace optimistic message with the result
       setMessages(prev =>
         prev.map(m => {
           if (m.id === tempId) {
-            return { ...m, id: result.id, status: result.status };
+            return {
+              ...result,
+              // Keep the timestamp from optimistic message for consistency
+              timestamp: m.timestamp
+            };
           }
           return m;
         })
       );
+      
+      // The status updates (delivered, read) will be handled by the status change listener
+      
     } catch (error) {
       console.log('Error saving message:', error);
-      // leave optimistic message as 'sent' (one tick) if DB fails
-      setMessages(prev =>
-        prev.map(m => (m.id === tempId ? { ...m, status: MESSAGE_STATUS.SENT } : m))
-      );
+      // Revert optimistic message on error
+      setMessages(prev => prev.filter(m => m.id !== tempId));
     }
   };
 
+  const handleDeleteMessage = async (messageId: string | number) => {
+    try {
+      console.log(`Handling delete for message: ${messageId}`);
+      
+      // If it's a temporary ID (string starting with 'temp-'), just remove from state
+      if (typeof messageId === 'string' && messageId.startsWith('temp-')) {
+        console.log('Removing temporary message from state:', messageId);
+        setMessages(prev => prev.filter(msg => msg.id !== messageId));
+        return;
+      }
+      
+      // Otherwise delete from database
+      const success = await deleteMessage(messageId);
+      console.log(`Delete operation success: ${success}`);
+      
+      if (success) {
+        // Update local state to remove the message
+        setMessages(prev => prev.filter(msg => msg.id !== messageId));
+        console.log('Message removed from UI state');
+      } else {
+        console.log('Delete operation reported no rows affected');
+      }
+    } catch (error) {
+      console.log('Error deleting message:', error);
+    }
+  };
+
+  // Update getCurrentTime to return ISO format for consistency
   const getCurrentTime = () => {
-    const now = new Date();
-    return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return new Date().toISOString();
   };
 
   const handleVoiceRecord = () => {
     console.log('Voice recording started');
   };
 
-  // Alternative approach using a system sound
+  // Use a different approach for sound
   const playMessageSound = async () => {
     try {
-      // Use a system sound - no file needed
-      await Audio.Sound.createAsync(
-        { uri: 'https://github.com/expo/expo/blob/master/apps/native-component-list/assets/sounds/one7.mp3?raw=true' },
-        { shouldPlay: true }
+      // Create sound only once
+      const { sound } = await Audio.Sound.createAsync(
+        // Use a system sound effect that's more likely to be available
+        { uri: 'https://soundbible.com/mp3/Click2-Sebastian-759472264.mp3' },
+        { volume: 0.5 }
       );
+      
+      await sound.playAsync();
+      
+      // Clean up
+      setTimeout(() => {
+        sound.unloadAsync();
+      }, 1000);
     } catch (error) {
-      console.log('Error playing sound:', error);
+      console.log('Error playing sound, continuing without sound');
+      // Don't try fallback - just continue silently
     }
   };
 
@@ -119,31 +178,39 @@ export default function HomeScreen() {
       
       {/* Chat content */}
       <View style={styles.container}>
-        <KeyboardAvoidingView 
-          style={{ flex: 1 }}
-          behavior="padding"
-        >
-          <KeyboardAwareScrollView 
-            ref={scrollViewRef}
-            style={styles.scrollView}
-            contentContainerStyle={styles.scrollContent}
-            enableOnAndroid={true}
-            extraScrollHeight={100}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-          >
-            {messages.map((message) => (
-              <ChatMessage
-                key={message.id.toString()}
-                text={message.text}
-                timestamp={message.timestamp}
-                status={message.status}
-              />
-            ))}
-            <View style={{ height: 14 }} />
-          </KeyboardAwareScrollView>
-          <MessageInput onSend={handleSend} onVoiceRecord={handleVoiceRecord} />
-        </KeyboardAvoidingView>
+<KeyboardAvoidingView 
+  style={{ flex: 1 }}
+  behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+  keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+>
+  <FlatList
+    ref={scrollViewRef}
+    style={styles.scrollView}
+    contentContainerStyle={styles.scrollContent}
+    data={messages}
+    keyExtractor={(item) => item.id.toString()}
+    renderItem={({ item }) => (
+      <ChatMessage
+        key={item.id.toString()}
+        id={item.id}
+        text={item.text}
+        timestamp={item.timestamp}
+        status={item.status}
+        onDelete={handleDeleteMessage}
+      />
+    )}
+    ListFooterComponent={() => <View style={{ height: 14 }} />}
+    onContentSizeChange={() => {
+      if (messages.length > 0) {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }
+    }}
+  />
+
+  {/* 👇 Always pinned at the bottom */}
+  <MessageInput onSend={handleSend} onVoiceRecord={handleVoiceRecord} />
+</KeyboardAvoidingView>
+
       </View>
     </View>
   );

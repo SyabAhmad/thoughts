@@ -505,21 +505,64 @@ export const updateMessageStatus = (
   });
 };
 
-export const deleteMessage = (messageId: number): Promise<void> => {
-  if (!db) return Promise.reject(new Error('SQLite database not available in this environment.'));
+export const deleteMessage = (id: number | string): Promise<boolean> => {
   return new Promise((resolve, reject) => {
-    db.transaction((tx: any) => {
+    if (!db) {
+      reject(new Error('Database not initialized'));
+      return;
+    }
+
+    // Convert string ID to number if needed
+    const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
+    
+    console.log(`Attempting to delete message with ID: ${numericId}`);
+    
+    db.transaction(tx => {
+      // First check if the message exists
       tx.executeSql(
-        'DELETE FROM messages WHERE id = ?;',
-        [messageId],
-        () => resolve(),
-        (_: any, error: any) => {
+        'SELECT * FROM messages WHERE id = ?',
+        [numericId],
+        (_, result) => {
+          if (result.rows.length === 0) {
+            console.log(`No message found with ID: ${numericId}`);
+            resolve(false);
+            return;
+          }
+          
+          // If it exists, delete it
+          tx.executeSql(
+            'DELETE FROM messages WHERE id = ?',
+            [numericId],
+            (_, deleteResult) => {
+              console.log(`Message deletion result: ${deleteResult.rowsAffected} rows affected`);
+              resolve(deleteResult.rowsAffected > 0);
+            },
+            (_, error) => {
+              console.error('Error deleting message:', error);
+              reject(error);
+              return false;
+            }
+          );
+        },
+        (_, error) => {
+          console.error('Error checking message existence:', error);
           reject(error);
           return false;
         }
       );
     });
   });
+};
+
+// Add this debug function
+export const getDatabaseInfo = () => {
+  return {
+    hasOpenDatabase,
+    databaseType: hasOpenDatabase ? 'SQLite' : 'In-Memory',
+    isWeb: typeof window !== 'undefined',
+    platform: require('expo-constants').default?.platform?.ios ? 'ios' : 
+              require('expo-constants').default?.platform?.android ? 'android' : 'unknown'
+  };
 };
 
 // Export the database instance

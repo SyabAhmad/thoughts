@@ -1,6 +1,6 @@
 // components/UserProfile.tsx
 import * as ImagePicker from 'expo-image-picker';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 interface UserProfileProps {
@@ -35,16 +35,28 @@ function UserProfile({
   const [isEditingInfo1, setIsEditingInfo1] = useState(false);
   const [isEditingInfo2, setIsEditingInfo2] = useState(false);
   
-  // Edit values
+  // Edit values - sync with props
   const [editedName, setEditedName] = useState(name);
   const [editedAbout, setEditedAbout] = useState(about);
   const [editedPhone, setEditedPhone] = useState(phone);
   const [editedInfo1, setEditedInfo1] = useState('📱 Mobile');
   const [editedInfo2, setEditedInfo2] = useState('⏰ Tap to view all services');
 
+  // Update local state when props change
+  useEffect(() => {
+    setEditedName(name);
+  }, [name]);
+
+  useEffect(() => {
+    setEditedAbout(about);
+  }, [about]);
+
+  useEffect(() => {
+    setEditedPhone(phone);
+  }, [phone]);
+
   // Handle image selection
   const handlePickImage = async () => {
-    // Request permissions
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     
     if (status !== 'granted') {
@@ -52,7 +64,6 @@ function UserProfile({
       return;
     }
     
-    // Launch image picker
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
@@ -62,7 +73,6 @@ function UserProfile({
     
     if (!result.canceled && result.assets && result.assets.length > 0) {
       const selectedImageUri = result.assets[0].uri;
-      // Call the callback to update the image in the parent component and database
       if (onImageChange) {
         onImageChange(selectedImageUri);
       }
@@ -71,8 +81,8 @@ function UserProfile({
 
   // Save handlers
   const handleNameSave = () => {
-    if (onNameChange) {
-      onNameChange(editedName);
+    if (onNameChange && editedName.trim()) {
+      onNameChange(editedName.trim());
     }
     setIsEditingName(false);
   };
@@ -85,8 +95,8 @@ function UserProfile({
   };
 
   const handlePhoneSave = () => {
-    if (onPhoneChange) {
-      onPhoneChange(editedPhone);
+    if (onPhoneChange && editedPhone.trim()) {
+      onPhoneChange(editedPhone.trim());
     }
     setIsEditingPhone(false);
   };
@@ -133,6 +143,7 @@ function UserProfile({
               autoFocus
               onSubmitEditing={handleNameSave}
               onBlur={handleNameSave}
+              placeholder="Enter your name"
             />
             <TouchableOpacity onPress={handleNameSave} style={styles.saveButton}>
               <Text style={styles.saveButtonText}>Save</Text>
@@ -140,11 +151,11 @@ function UserProfile({
           </View>
         ) : (
           <View style={styles.infoRow}>
-            <Text style={styles.infoText}>{name}</Text>
+            <Text style={styles.infoText}>{name || 'Tap to add name'}</Text>
             <TouchableOpacity 
               onPress={() => {
                 setIsEditingName(true);
-                setEditedName(name);
+                setEditedName(name || '');
               }}
               style={styles.editIcon}
             >
@@ -160,13 +171,13 @@ function UserProfile({
         {isEditingAbout ? (
           <View style={styles.editContainer}>
             <TextInput
-              style={styles.editInput}
+              style={[styles.editInput, styles.multilineInput]}
               value={editedAbout}
               onChangeText={setEditedAbout}
               autoFocus
               multiline
-              onSubmitEditing={handleAboutSave}
               onBlur={handleAboutSave}
+              placeholder="Add about info"
             />
             <TouchableOpacity onPress={handleAboutSave} style={styles.saveButton}>
               <Text style={styles.saveButtonText}>Save</Text>
@@ -174,11 +185,11 @@ function UserProfile({
           </View>
         ) : (
           <View style={styles.infoRow}>
-            <Text style={styles.infoText}>{about || 'No about info'}</Text>
+            <Text style={styles.infoText}>{about || 'Hey there! I am using Thoughts.'}</Text>
             <TouchableOpacity 
               onPress={() => {
                 setIsEditingAbout(true);
-                setEditedAbout(about);
+                setEditedAbout(about || '');
               }}
               style={styles.editIcon}
             >
@@ -201,6 +212,7 @@ function UserProfile({
               keyboardType="phone-pad"
               onSubmitEditing={handlePhoneSave}
               onBlur={handlePhoneSave}
+              placeholder="Enter phone number"
             />
             <TouchableOpacity onPress={handlePhoneSave} style={styles.saveButton}>
               <Text style={styles.saveButtonText}>Save</Text>
@@ -208,11 +220,11 @@ function UserProfile({
           </View>
         ) : (
           <View style={styles.infoRow}>
-            <Text style={styles.infoText}>{phone}</Text>
+            <Text style={styles.infoText}>{phone || 'Tap to add phone'}</Text>
             <TouchableOpacity 
               onPress={() => {
                 setIsEditingPhone(true);
-                setEditedPhone(phone);
+                setEditedPhone(phone || '');
               }}
               style={styles.editIcon}
             >
@@ -228,7 +240,6 @@ function UserProfile({
           <Text style={styles.sectionTitle}>LAST SEEN</Text>
           <View style={styles.infoRow}>
             <Text style={styles.infoText}>{lastSeen}</Text>
-            {/* Last seen is typically not user-editable */}
           </View>
         </View>
       )}
@@ -256,9 +267,7 @@ function UserProfile({
           <View style={styles.infoRow}>
             <Text style={styles.infoText}>{editedInfo1}</Text>
             <TouchableOpacity 
-              onPress={() => {
-                setIsEditingInfo1(true);
-              }}
+              onPress={() => setIsEditingInfo1(true)}
               style={styles.editIcon}
             >
               <Text style={styles.editIconText}>✏️</Text>
@@ -285,9 +294,7 @@ function UserProfile({
           <View style={styles.infoRow}>
             <Text style={styles.infoText}>{editedInfo2}</Text>
             <TouchableOpacity 
-              onPress={() => {
-                setIsEditingInfo2(true);
-              }}
+              onPress={() => setIsEditingInfo2(true)}
               style={styles.editIcon}
             >
               <Text style={styles.editIconText}>✏️</Text>
@@ -303,6 +310,7 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: '#f0f0f0',
     padding: 16,
+    flex: 1,
   },
   profileImageContainer: {
     alignItems: 'center',
@@ -383,6 +391,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 6,
     marginRight: 8,
+  },
+  multilineInput: {
+    minHeight: 60,
+    textAlignVertical: 'top',
   },
   saveButton: {
     backgroundColor: '#075e54',

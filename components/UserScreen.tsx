@@ -1,7 +1,7 @@
 import UserProfile from '@/components/UserProfile';
-import { getUser, updateUser } from '@/services/DatabaseService';
+import { getUser, updateUser } from '@/services/AsyncStorageService';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StatusBar, StyleSheet, Text, View } from 'react-native';
 
 // You can pass userId as a prop instead of using useSearchParams
 export default function UserScreen({ userId = 1 }) {
@@ -13,6 +13,7 @@ export default function UserScreen({ userId = 1 }) {
     const load = async () => {
       try {
         const u = await getUser(userId);
+        console.log('Loaded user:', u); // Debug log
         if (mounted) setUser(u);
       } catch (e) {
         console.log('Error loading user:', e);
@@ -30,16 +31,16 @@ export default function UserScreen({ userId = 1 }) {
   const handleImageChange = async (imageUri: string) => {
     if (!user) return;
     try {
-      // Update locally first with the correct property name
-      setUser((prev) => ({ ...prev, profile_image: imageUri }));
+      console.log('Updating image to:', imageUri);
+      
+      // Update locally first
+      setUser((prev) => ({ ...prev, profileImage: imageUri }));
 
-      // Then update in database with the correct property name
+      // Then update in database - use consistent property name
       await updateUser(userId, {
-        ...user,
-        profileImage: imageUri, // This matches what updateUser expects
+        profileImage: imageUri,
       });
       
-      // Add debug logging
       console.log('Image updated successfully:', imageUri);
     } catch (e) {
       console.log('Error updating profile image:', e);
@@ -50,14 +51,17 @@ export default function UserScreen({ userId = 1 }) {
   const handleUpdateName = async (newName: string) => {
     if (!user) return;
     try {
+      console.log('Updating name to:', newName);
+      
       // Update locally first for immediate feedback
       setUser((prev) => ({ ...prev, name: newName }));
 
       // Then update in database
       await updateUser(userId, {
-        ...user,
         name: newName,
       });
+      
+      console.log('Name updated successfully');
     } catch (e) {
       console.log('Error updating name:', e);
     }
@@ -67,14 +71,17 @@ export default function UserScreen({ userId = 1 }) {
   const handleUpdateAbout = async (newAbout: string) => {
     if (!user) return;
     try {
+      console.log('Updating about to:', newAbout);
+      
       // Update locally first for immediate feedback
       setUser((prev) => ({ ...prev, about: newAbout }));
 
       // Then update in database
       await updateUser(userId, {
-        ...user,
         about: newAbout,
       });
+      
+      console.log('About updated successfully');
     } catch (e) {
       console.log('Error updating about:', e);
     }
@@ -84,12 +91,15 @@ export default function UserScreen({ userId = 1 }) {
   const handleUpdatePhone = async (newPhone: string) => {
     if (!user) return;
     try {
+      console.log('Updating phone to:', newPhone);
+      
       setUser((prev) => ({ ...prev, subtitle: newPhone }));
       
       await updateUser(userId, {
-        ...user,
         subtitle: newPhone,
       });
+      
+      console.log('Phone updated successfully');
     } catch (e) {
       console.log('Error updating phone:', e);
     }
@@ -98,7 +108,8 @@ export default function UserScreen({ userId = 1 }) {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator />
+        <ActivityIndicator size="large" color="#075e54" />
+        <Text style={{ marginTop: 10 }}>Loading profile...</Text>
       </View>
     );
   }
@@ -111,14 +122,19 @@ export default function UserScreen({ userId = 1 }) {
     );
   }
 
-  // Fix in the render section
+  console.log('Rendering user:', user); // Debug log
+
   return (
     <View style={styles.container}>
+      <StatusBar 
+        backgroundColor="white" 
+        barStyle="dark-content" 
+      />
       <UserProfile
-        name={user.name || 'John Doe'}
-        about={user.about || 'Hey there! I am using WhatsApp.'}
-        profileImage={user.profile_image || 'https://i.pravatar.cc/150?img=12'}
-        phone={user.subtitle}
+        name={user.name || 'Your Name'}
+        about={user.about || 'Hey there! I am using Thoughts.'}
+        profileImage={user.profileImage || 'https://i.pravatar.cc/150?img=12'}
+        phone={user.subtitle || '+1 (555) 123-4567'}
         lastSeen={user.lastSeen || 'Today at 10:30 AM'}
         onNameChange={handleUpdateName}
         onAboutChange={handleUpdateAbout}

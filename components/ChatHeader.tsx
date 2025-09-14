@@ -1,101 +1,142 @@
-import { getUser } from '@/services/DatabaseService';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useFocusEffect, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { getUser } from '@/services/AsyncStorageService';
+import { useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-const ChatHeader = () => {
+export default function ChatHeader() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
 
-  // Function to fetch user data
-  const fetchUserData = useCallback(async () => {
-    setLoading(true);
-    try {
-      // Using user ID 1 as the default user
-      const userData = await getUser(1);
-      console.log('Fetched user data:', userData); // Debug log
-      setUser(userData);
-    } catch (error) {
-      console.log('Error fetching user data:', error);
-    } finally {
-      setLoading(false);
-    }
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const userData = await getUser(1); // Default user ID
+        setUser(userData);
+      } catch (error) {
+        console.log('Error loading user for header:', error);
+      }
+    };
+    loadUser();
   }, []);
 
-  // Fetch data initially when component mounts
-  useEffect(() => {
-    fetchUserData();
-  }, [fetchUserData]);
+  const handleProfilePress = () => {
+    router.push('/user');
+  };
 
-  // Re-fetch data when screen comes into focus
-  useFocusEffect(
-    useCallback(() => {
-      fetchUserData();
-      return () => {
-        // Cleanup function if needed
-      };
-    }, [fetchUserData])
-  );
+  // Format lastSeen timestamp
+  const formatLastSeen = (lastSeen: string) => {
+    if (!lastSeen) return 'Tap here for profile info';
+
+    try {
+      const lastSeenDate = new Date(lastSeen);
+      const now = new Date();
+      const diffInMinutes = Math.floor((now.getTime() - lastSeenDate.getTime()) / (1000 * 60));
+
+      if (diffInMinutes < 1) {
+        return 'online';
+      } else if (diffInMinutes < 60) {
+        return `last seen ${diffInMinutes} minute${diffInMinutes > 1 ? 's' : ''} ago`;
+      } else if (diffInMinutes < 1440) {
+        // Less than 24 hours
+        const hours = Math.floor(diffInMinutes / 60);
+        return `last seen ${hours} hour${hours > 1 ? 's' : ''} ago`;
+      } else if (diffInMinutes < 2880) {
+        // Less than 48 hours
+        return 'last seen yesterday';
+      } else {
+        // Show formatted date for older timestamps
+        return `last seen ${lastSeenDate.toLocaleDateString([], {
+          month: 'short',
+          day: 'numeric',
+        })}`;
+      }
+    } catch (error) {
+      return 'Tap here for profile info';
+    }
+  };
 
   return (
-    <View style={styles.header}>
+    <View style={styles.container}>
       <TouchableOpacity
-        style={styles.profileContainer}
-        onPress={() => router.push('/user')}
-        accessibilityRole="button"
-        accessibilityLabel="Open user profile"
+        style={styles.profileSection}
+        onPress={handleProfilePress}
+        activeOpacity={0.7}
       >
-        {loading ? (
-          <ActivityIndicator size="small" color="#fff" />
-        ) : (
-          <>
-            <Image
-              source={{ uri: user?.profile_image || 'https://i.pravatar.cc/150?img=12' }}
-              style={styles.profileImage}
-            />
-            <View style={styles.textContainer}>
-              <Text style={styles.name}>{user?.name || 'You'}</Text>
-              <View style={styles.statusContainer}>
-                <View style={styles.onlineIndicator} />
-                <Text style={styles.status}>{user?.about || 'Online'}</Text>
-              </View>
-            </View>
-          </>
-        )}
+        <Image
+          source={{
+            uri: user?.profileImage || user?.profile_image || 'https://i.pravatar.cc/150?img=12',
+          }}
+          style={styles.profileImage}
+        />
+        <View style={styles.userInfo}>
+          <Text style={styles.userName}>{user?.name || 'MenteE'}</Text>
+          <Text style={styles.userStatus}>{formatLastSeen(user?.lastSeen)}</Text>
+        </View>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.menuButton}>
-        <MaterialCommunityIcons name="dots-vertical" size={24} color="#fff" />
-      </TouchableOpacity>
+      <View style={styles.actions}>
+        {/* <TouchableOpacity style={styles.actionButton}>
+          <Text style={styles.actionIcon}>📹</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionButton}>
+          <Text style={styles.actionIcon}>📞</Text>
+        </TouchableOpacity> */}
+        <TouchableOpacity style={styles.actionButton}>
+          <Text style={styles.actionIcon}>⋮</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  header: {
+  container: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
     backgroundColor: '#075e54',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    marginVertical: 0, // Remove the excessive margin
-    elevation: 3,
+    elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  profileContainer: { flexDirection: 'row', alignItems: 'center' },
-  profileImage: { width: 40, height: 40, borderRadius: 20, borderWidth: 2, borderColor: 'rgba(255,255,255,0.5)' },
-  textContainer: { marginLeft: 12 },
-  name: { fontSize: 18, fontWeight: '600', color: '#fff' },
-  statusContainer: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
-  onlineIndicator: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#4fce5d', marginRight: 6 },
-  status: { fontSize: 13, color: '#d1ffdb' },
-  menuButton: { padding: 4 },
+  profileSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  profileImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
+  },
+  userInfo: {
+    flex: 1,
+  },
+  userName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  userStatus: {
+    fontSize: 13,
+    color: '#b3d9d3',
+    marginTop: 2,
+  },
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  actionButton: {
+    padding: 8,
+    marginLeft: 8,
+  },
+  actionIcon: {
+    fontSize: 20,
+    color: '#fff',
+  },
 });
-
-export default ChatHeader;

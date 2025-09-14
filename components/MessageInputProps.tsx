@@ -58,7 +58,7 @@ export default function MessageInput({ onSend, onVoiceRecord }: MessageInputProp
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#e5ddd5',
     paddingHorizontal: 10,
     paddingVertical: 8,
     borderTopWidth: 1,
