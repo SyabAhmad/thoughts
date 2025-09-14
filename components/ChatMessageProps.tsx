@@ -7,13 +7,24 @@ export default function ChatMessage({ text, timestamp, status = 'sent', isOutgoi
     if (status === MESSAGE_STATUS.SENDING) {
       return <Text style={styles.pending}>●</Text>; // or spinner
     } else if (status === MESSAGE_STATUS.SENT) {
-      return <Text style={styles.tickGray}>✓</Text>; // one gray tick
-    } else if (status === MESSAGE_STATUS.SAVED) {
-      return <Text style={styles.tickBlue}>✓✓</Text>; // two blue ticks
+      // Single tick (sent)
+      return <Text style={styles.tickGray}>✓</Text>;
+    } else if (status === MESSAGE_STATUS.SAVED || status === MESSAGE_STATUS.READ) {
+      // Double ticks (saved/read) - render side-by-side using flexRow
+      return (
+        <View style={styles.doubleTicks}>
+          <Text style={styles.tickBlue}>✓</Text>
+          <Text style={styles.tickBlue}>✓</Text>
+        </View>
+      );
     } else if (status === MESSAGE_STATUS.DELIVERED) {
-      return <Text style={styles.tickGray}>✓✓</Text>; // two gray ticks
-    } else if (status === MESSAGE_STATUS.READ) {
-      return <Text style={styles.tickBlue}>✓✓</Text>; // two blue ticks
+      // Double gray ticks (delivered) - render side-by-side
+      return (
+        <View style={styles.doubleTicks}>
+          <Text style={styles.tickGray}>✓</Text>
+          <Text style={styles.tickGray}>✓</Text>
+        </View>
+      );
     }
     return null;
   };
@@ -61,8 +72,8 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   statusContainer: {
-    width: 16,
-    alignItems: 'center',
+    minWidth: 20,
+    alignItems: 'flex-end',
     justifyContent: 'center',
   },
   tickGray: {
@@ -76,5 +87,11 @@ const styles = StyleSheet.create({
   pending: {
     color: '#7f8c8d',
     fontSize: 9,
+  },
+  // New style for side-by-side ticks
+  doubleTicks: {
+    flexDirection: 'row', // Side by side
+    alignItems: 'center',
+    justifyContent: 'flex-end',
   },
 });

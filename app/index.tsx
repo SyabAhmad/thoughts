@@ -1,6 +1,6 @@
 // app/index.tsx
-import { useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { KeyboardAvoidingView, StyleSheet, View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 import ChatHeader from '@/components/ChatHeader';
@@ -10,6 +10,7 @@ import { createUser, getAllMessages, getUser, initDatabase, MESSAGE_STATUS, send
 
 export default function HomeScreen() {
   const [messages, setMessages] = useState<any[]>([]);
+  const scrollViewRef = useRef<KeyboardAwareScrollView>(null);
 
   // Initialize database and load messages
   useEffect(() => {
@@ -29,20 +30,21 @@ export default function HomeScreen() {
     })();
   }, []);
 
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    if (scrollViewRef.current && messages.length > 0) {
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    }
+  }, [messages]);
+
   const loadMessages = async () => {
     try {
       const storedMessages = await getAllMessages();
       setMessages(storedMessages);
     } catch (error) {
       console.log('Error loading messages:', error);
-      // Fallback to initial messages if database fails
-      const initialMessages = [
-        { id: '1', text: 'Hey there! How are you doing?', timestamp: '10:30 AM', status: 'read' as const },
-        { id: '2', text: 'I was thinking about our meeting tomorrow. Should we prepare the presentation?', timestamp: '10:32 AM', status: 'read' as const },
-        { id: '3', text: 'Yes, that sounds good. I\'ll bring the slides.', timestamp: '10:35 AM', status: 'delivered' as const },
-        { id: '4', text: 'Perfect! See you at 2 PM then. Don\'t forget to bring the documents.', timestamp: '10:36 AM', status: 'sent' as const },
-      ];
-      setMessages(initialMessages);
     }
   };
 
@@ -53,8 +55,6 @@ export default function HomeScreen() {
     const timestamp = getCurrentTime();
     const tempId = `temp-${Date.now()}`;
     
-    console.log('1. Adding optimistic message with status:', MESSAGE_STATUS.SENT);
-    
     const optimisticMessage = {
       id: tempId,
       text,
@@ -64,18 +64,20 @@ export default function HomeScreen() {
 
     // add optimistic message to UI
     setMessages(prev => [...prev, optimisticMessage]);
+    
+    // Scroll to the new message
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 100);
 
     try {
-      console.log('2. Calling sendMessage...');
       // Use sendMessage instead of saveMessage (this properly handles sent → saved transition)
       const result = await sendMessage(text, 1);
-      console.log('3. sendMessage returned with status:', result.status);
       
       // Replace optimistic message with the result (which has status=saved)
       setMessages(prev =>
         prev.map(m => {
           if (m.id === tempId) {
-            console.log('4. Updating message from', m.status, 'to', result.status);
             return { ...m, id: result.id, status: result.status };
           }
           return m;
@@ -102,24 +104,32 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <ChatHeader />
-      <KeyboardAwareScrollView 
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        extraScrollHeight={100}
-        enableOnAndroid={true}
-        keyboardShouldPersistTaps="handled"
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }}
+        behavior="padding" // Use padding for both platforms
+        // keyboardVerticalOffset={60} // Increased offset for Android
       >
-        {messages.map((message) => (
-          <ChatMessage
-            key={message.id.toString()}
-            text={message.text}
-            timestamp={message.timestamp}
-            status={message.status}
-          />
-        ))}
-        <View style={{ flex: 1 }} />
-      </KeyboardAwareScrollView>
-      <MessageInput onSend={handleSend} onVoiceRecord={handleVoiceRecord} />
+        <KeyboardAwareScrollView 
+          ref={scrollViewRef}
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          enableOnAndroid={true}
+          extraScrollHeight={100}  // Add this to give extra space
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {messages.map((message) => (
+            <ChatMessage
+              key={message.id.toString()}
+              text={message.text}
+              timestamp={message.timestamp}
+              status={message.status}
+            />
+          ))}
+          <View style={{ height: 14 }} />
+        </KeyboardAwareScrollView>
+        <MessageInput onSend={handleSend} onVoiceRecord={handleVoiceRecord} />
+      </KeyboardAvoidingView>
     </View>
   );
 }
@@ -127,12 +137,14 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#e5ddd5', // Changed to WhatsApp-like background
+    backgroundColor: '#e5ddd5', // WhatsApp-like background
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
     padding: 16,
+    paddingBottom: 8,
+    flexGrow: 1, // Add this to ensure content expands
   },
 });
