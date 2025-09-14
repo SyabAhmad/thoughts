@@ -1,33 +1,299 @@
 // components/UserProfile.tsx
-import React from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import React, { useState } from 'react';
+import { Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 interface UserProfileProps {
   name: string;
   about: string;
-  subtitle: string;
   profileImage: string;
+  phone?: string;
   lastSeen?: string;
+  onNameChange?: (name: string) => void;
+  onAboutChange?: (about: string) => void;
+  onPhoneChange?: (phone: string) => void;
+  onInfoChange?: (index: number, info: string) => void;
+  onImageChange?: (imageUri: string) => void;
 }
 
-export default function UserProfile({ 
+function UserProfile({ 
   name, 
   about, 
-  subtitle, 
   profileImage,
-  lastSeen 
+  phone = '+1 (555) 123-4567',
+  lastSeen,
+  onNameChange,
+  onAboutChange,
+  onPhoneChange,
+  onInfoChange,
+  onImageChange
 }: UserProfileProps) {
+  // Edit states
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [isEditingAbout, setIsEditingAbout] = useState(false);
+  const [isEditingPhone, setIsEditingPhone] = useState(false);
+  const [isEditingInfo1, setIsEditingInfo1] = useState(false);
+  const [isEditingInfo2, setIsEditingInfo2] = useState(false);
+  
+  // Edit values
+  const [editedName, setEditedName] = useState(name);
+  const [editedAbout, setEditedAbout] = useState(about);
+  const [editedPhone, setEditedPhone] = useState(phone);
+  const [editedInfo1, setEditedInfo1] = useState('📱 Mobile');
+  const [editedInfo2, setEditedInfo2] = useState('⏰ Tap to view all services');
+
+  // Handle image selection
+  const handlePickImage = async () => {
+    // Request permissions
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    
+    if (status !== 'granted') {
+      alert('Sorry, we need camera roll permissions to make this work!');
+      return;
+    }
+    
+    // Launch image picker
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      const selectedImageUri = result.assets[0].uri;
+      // Call the callback to update the image in the parent component and database
+      if (onImageChange) {
+        onImageChange(selectedImageUri);
+      }
+    }
+  };
+
+  // Save handlers
+  const handleNameSave = () => {
+    if (onNameChange) {
+      onNameChange(editedName);
+    }
+    setIsEditingName(false);
+  };
+
+  const handleAboutSave = () => {
+    if (onAboutChange) {
+      onAboutChange(editedAbout);
+    }
+    setIsEditingAbout(false);
+  };
+
+  const handlePhoneSave = () => {
+    if (onPhoneChange) {
+      onPhoneChange(editedPhone);
+    }
+    setIsEditingPhone(false);
+  };
+
+  const handleInfo1Save = () => {
+    if (onInfoChange) {
+      onInfoChange(0, editedInfo1);
+    }
+    setIsEditingInfo1(false);
+  };
+
+  const handleInfo2Save = () => {
+    if (onInfoChange) {
+      onInfoChange(1, editedInfo2);
+    }
+    setIsEditingInfo2(false);
+  };
+
   return (
     <View style={styles.container}>
-      <Image 
-        source={{ uri: profileImage || 'https://i.pravatar.cc/150?img=12' }} 
-        style={styles.profileImage}
-      />
-      <View style={styles.infoContainer}>
-        <Text style={styles.name}>{name}</Text>
-        <Text style={styles.subtitle}>{subtitle}</Text>
-        {about ? <Text style={styles.about}>{about}</Text> : null}
-        {lastSeen ? <Text style={styles.lastSeen}>Last seen: {lastSeen}</Text> : null}
+      {/* Profile Picture */}
+      <View style={styles.profileImageContainer}>
+        <Image 
+          source={{ uri: profileImage || 'https://i.pravatar.cc/150?img=12' }} 
+          style={styles.profileImage}
+        />
+        <TouchableOpacity 
+          style={styles.editImageButton}
+          onPress={handlePickImage}
+        >
+          <Text style={styles.editImageText}>Edit</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Name Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>NAME</Text>
+        {isEditingName ? (
+          <View style={styles.editContainer}>
+            <TextInput
+              style={styles.editInput}
+              value={editedName}
+              onChangeText={setEditedName}
+              autoFocus
+              onSubmitEditing={handleNameSave}
+              onBlur={handleNameSave}
+            />
+            <TouchableOpacity onPress={handleNameSave} style={styles.saveButton}>
+              <Text style={styles.saveButtonText}>Save</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.infoRow}>
+            <Text style={styles.infoText}>{name}</Text>
+            <TouchableOpacity 
+              onPress={() => {
+                setIsEditingName(true);
+                setEditedName(name);
+              }}
+              style={styles.editIcon}
+            >
+              <Text style={styles.editIconText}>✏️</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+
+      {/* About Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>ABOUT</Text>
+        {isEditingAbout ? (
+          <View style={styles.editContainer}>
+            <TextInput
+              style={styles.editInput}
+              value={editedAbout}
+              onChangeText={setEditedAbout}
+              autoFocus
+              multiline
+              onSubmitEditing={handleAboutSave}
+              onBlur={handleAboutSave}
+            />
+            <TouchableOpacity onPress={handleAboutSave} style={styles.saveButton}>
+              <Text style={styles.saveButtonText}>Save</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.infoRow}>
+            <Text style={styles.infoText}>{about || 'No about info'}</Text>
+            <TouchableOpacity 
+              onPress={() => {
+                setIsEditingAbout(true);
+                setEditedAbout(about);
+              }}
+              style={styles.editIcon}
+            >
+              <Text style={styles.editIconText}>✏️</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+
+      {/* Phone Number Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>PHONE</Text>
+        {isEditingPhone ? (
+          <View style={styles.editContainer}>
+            <TextInput
+              style={styles.editInput}
+              value={editedPhone}
+              onChangeText={setEditedPhone}
+              autoFocus
+              keyboardType="phone-pad"
+              onSubmitEditing={handlePhoneSave}
+              onBlur={handlePhoneSave}
+            />
+            <TouchableOpacity onPress={handlePhoneSave} style={styles.saveButton}>
+              <Text style={styles.saveButtonText}>Save</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.infoRow}>
+            <Text style={styles.infoText}>{phone}</Text>
+            <TouchableOpacity 
+              onPress={() => {
+                setIsEditingPhone(true);
+                setEditedPhone(phone);
+              }}
+              style={styles.editIcon}
+            >
+              <Text style={styles.editIconText}>✏️</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+
+      {/* Status Section */}
+      {lastSeen && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>LAST SEEN</Text>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoText}>{lastSeen}</Text>
+            {/* Last seen is typically not user-editable */}
+          </View>
+        </View>
+      )}
+
+      {/* Additional Info */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>INFO</Text>
+        
+        {/* Info Item 1 */}
+        {isEditingInfo1 ? (
+          <View style={styles.editContainer}>
+            <TextInput
+              style={styles.editInput}
+              value={editedInfo1}
+              onChangeText={setEditedInfo1}
+              autoFocus
+              onSubmitEditing={handleInfo1Save}
+              onBlur={handleInfo1Save}
+            />
+            <TouchableOpacity onPress={handleInfo1Save} style={styles.saveButton}>
+              <Text style={styles.saveButtonText}>Save</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.infoRow}>
+            <Text style={styles.infoText}>{editedInfo1}</Text>
+            <TouchableOpacity 
+              onPress={() => {
+                setIsEditingInfo1(true);
+              }}
+              style={styles.editIcon}
+            >
+              <Text style={styles.editIconText}>✏️</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        
+        {/* Info Item 2 */}
+        {isEditingInfo2 ? (
+          <View style={styles.editContainer}>
+            <TextInput
+              style={styles.editInput}
+              value={editedInfo2}
+              onChangeText={setEditedInfo2}
+              autoFocus
+              onSubmitEditing={handleInfo2Save}
+              onBlur={handleInfo2Save}
+            />
+            <TouchableOpacity onPress={handleInfo2Save} style={styles.saveButton}>
+              <Text style={styles.saveButtonText}>Save</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.infoRow}>
+            <Text style={styles.infoText}>{editedInfo2}</Text>
+            <TouchableOpacity 
+              onPress={() => {
+                setIsEditingInfo2(true);
+              }}
+              style={styles.editIcon}
+            >
+              <Text style={styles.editIconText}>✏️</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -35,41 +301,100 @@ export default function UserProfile({
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    backgroundColor: '#f0f0f0',
     padding: 16,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+  },
+  profileImageContainer: {
+    alignItems: 'center',
+    marginVertical: 24,
+    position: 'relative',
   },
   profileImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    marginRight: 16,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 3,
+    borderColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  infoContainer: {
+  editImageButton: {
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    position: 'absolute',
+    bottom: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  editImageText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  section: {
+    backgroundColor: '#fff',
+    marginBottom: 16,
+    padding: 16,
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  sectionTitle: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 8,
+    fontWeight: '600',
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  infoText: {
+    fontSize: 16,
+    color: '#000',
     flex: 1,
   },
-  name: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 4,
+  editIcon: {
+    padding: 8,
   },
-  subtitle: {
+  editIconText: {
     fontSize: 16,
-    color: '#666',
-    marginBottom: 2,
   },
-  about: {
+  editContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  editInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#000',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    marginRight: 8,
+  },
+  saveButton: {
+    backgroundColor: '#075e54',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 4,
+  },
+  saveButtonText: {
+    color: '#fff',
     fontSize: 14,
-    color: '#888',
-    fontStyle: 'italic',
-  },
-  lastSeen: {
-    fontSize: 12,
-    color: '#999',
-    marginTop: 4,
+    fontWeight: '600',
   },
 });
+
+export default UserProfile;

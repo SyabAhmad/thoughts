@@ -1,33 +1,23 @@
 // app/index.tsx
+import { Audio } from 'expo-av';
 import { useEffect, useRef, useState } from 'react';
-import { KeyboardAvoidingView, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, StatusBar, StyleSheet, View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import ChatHeader from '@/components/ChatHeader';
 import ChatMessage from '@/components/ChatMessageProps';
 import MessageInput from '@/components/MessageInputProps';
-import { createUser, getAllMessages, getUser, initDatabase, MESSAGE_STATUS, sendMessage } from '@/services/DatabaseService';
+import { getAllMessages, MESSAGE_STATUS, sendMessage } from '@/services/DatabaseService';
 
 export default function HomeScreen() {
   const [messages, setMessages] = useState<any[]>([]);
   const scrollViewRef = useRef<KeyboardAwareScrollView>(null);
+  const insets = useSafeAreaInsets();
 
   // Initialize database and load messages
   useEffect(() => {
-    initDatabase();
     loadMessages();
-
-    // ensure a default user exists (simple approach)
-    (async () => {
-      try {
-        const u = await getUser(1);
-        if (!u) {
-          await createUser('You', 'About you', 'subtitle', 'https://i.pravatar.cc/150?img=12');
-        }
-      } catch (e) {
-        console.log('ensure user error', e);
-      }
-    })();
   }, []);
 
   // Scroll to bottom when messages change
@@ -101,35 +91,60 @@ export default function HomeScreen() {
     console.log('Voice recording started');
   };
 
+  // Alternative approach using a system sound
+  const playMessageSound = async () => {
+    try {
+      // Use a system sound - no file needed
+      await Audio.Sound.createAsync(
+        { uri: 'https://github.com/expo/expo/blob/master/apps/native-component-list/assets/sounds/one7.mp3?raw=true' },
+        { shouldPlay: true }
+      );
+    } catch (error) {
+      console.log('Error playing sound:', error);
+    }
+  };
+
   return (
-    <View style={styles.container}>
+    <View style={{ flex: 1, backgroundColor: 'white' }}>
+      <StatusBar 
+        backgroundColor="white" 
+        barStyle="dark-content" 
+      />
+      
+      {/* Top white status bar area */}
+      <View style={{ height: insets.top, backgroundColor: 'white' }} />
+      
+      {/* Chat header */}
       <ChatHeader />
-      <KeyboardAvoidingView 
-        style={{ flex: 1 }}
-        behavior="padding" // Use padding for both platforms
-        // keyboardVerticalOffset={60} // Increased offset for Android
-      >
-        <KeyboardAwareScrollView 
-          ref={scrollViewRef}
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          enableOnAndroid={true}
-          extraScrollHeight={100}  // Add this to give extra space
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
+      
+      {/* Chat content */}
+      <View style={styles.container}>
+        <KeyboardAvoidingView 
+          style={{ flex: 1 }}
+          behavior="padding"
         >
-          {messages.map((message) => (
-            <ChatMessage
-              key={message.id.toString()}
-              text={message.text}
-              timestamp={message.timestamp}
-              status={message.status}
-            />
-          ))}
-          <View style={{ height: 14 }} />
-        </KeyboardAwareScrollView>
-        <MessageInput onSend={handleSend} onVoiceRecord={handleVoiceRecord} />
-      </KeyboardAvoidingView>
+          <KeyboardAwareScrollView 
+            ref={scrollViewRef}
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            enableOnAndroid={true}
+            extraScrollHeight={100}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            {messages.map((message) => (
+              <ChatMessage
+                key={message.id.toString()}
+                text={message.text}
+                timestamp={message.timestamp}
+                status={message.status}
+              />
+            ))}
+            <View style={{ height: 14 }} />
+          </KeyboardAwareScrollView>
+          <MessageInput onSend={handleSend} onVoiceRecord={handleVoiceRecord} />
+        </KeyboardAvoidingView>
+      </View>
     </View>
   );
 }
@@ -145,6 +160,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 16,
     paddingBottom: 8,
-    flexGrow: 1, // Add this to ensure content expands
+    flexGrow: 1,
   },
 });

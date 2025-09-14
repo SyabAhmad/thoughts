@@ -302,56 +302,67 @@ export const getUser = (userId: number): Promise<any> => {
 
 export const updateUser = (
   userId: number,
-  updates: {
+  userData: {
     name?: string;
     about?: string;
     subtitle?: string;
     profileImage?: string;
     lastSeen?: string;
   }
-): Promise<void> => {
-  if (!db) return Promise.reject(new Error('SQLite database not available in this environment.'));
+): Promise<boolean> => {
   return new Promise((resolve, reject) => {
-    const fields: string[] = [];
-    const values: any[] = [];
-
-    if (updates.name !== undefined) {
-      fields.push('name = ?');
-      values.push(updates.name);
-    }
-    if (updates.about !== undefined) {
-      fields.push('about = ?');
-      values.push(updates.about);
-    }
-    if (updates.subtitle !== undefined) {
-      fields.push('subtitle = ?');
-      values.push(updates.subtitle);
-    }
-    if (updates.profileImage !== undefined) {
-      fields.push('profile_image = ?');
-      values.push(updates.profileImage);
-    }
-    if (updates.lastSeen !== undefined) {
-      fields.push('last_seen = ?');
-      values.push(updates.lastSeen);
-    }
-
-    // Always update the updated_at field
-    fields.push('updated_at = CURRENT_TIMESTAMP');
-    
-    if (fields.length === 0) {
-      resolve();
+    if (!db) {
+      reject(new Error('Database not initialized'));
       return;
     }
 
+    // Build the SET clause dynamically based on what's provided
+    const updateFields: string[] = [];
+    const values: any[] = [];
+    
+    if (userData.name !== undefined) {
+      updateFields.push('name = ?');
+      values.push(userData.name);
+    }
+    
+    if (userData.about !== undefined) {
+      updateFields.push('about = ?');
+      values.push(userData.about);
+    }
+    
+    if (userData.subtitle !== undefined) {
+      updateFields.push('subtitle = ?');
+      values.push(userData.subtitle);
+    }
+    
+    if (userData.profileImage !== undefined) {
+      updateFields.push('profile_image = ?');
+      values.push(userData.profileImage);
+    }
+    
+    if (userData.lastSeen !== undefined) {
+      updateFields.push('last_seen = ?');
+      values.push(userData.lastSeen);
+    }
+    
+    if (updateFields.length === 0) {
+      resolve(false); // Nothing to update
+      return;
+    }
+    
+    // Add userId to values array for the WHERE clause
     values.push(userId);
-
-    db.transaction((tx: any) => {
+    
+    const query = `UPDATE users SET ${updateFields.join(', ')} WHERE id = ?`;
+    
+    db.transaction(tx => {
       tx.executeSql(
-        `UPDATE users SET ${fields.join(', ')} WHERE id = ?;`,
+        query,
         values,
-        () => resolve(),
-        (_: any, error: any) => {
+        (_, result) => {
+          resolve(result.rowsAffected > 0);
+        },
+        (_, error) => {
           reject(error);
           return false;
         }
