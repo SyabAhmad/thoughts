@@ -1,23 +1,34 @@
 import { getUser } from '@/services/AsyncStorageService';
-import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function ChatHeader() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
 
-  useEffect(() => {
-    const loadUser = async () => {
-      try {
-        const userData = await getUser(1); // Default user ID
-        setUser(userData);
-      } catch (error) {
-        console.log('Error loading user for header:', error);
-      }
-    };
-    loadUser();
+  const loadUser = useCallback(async () => {
+    try {
+      const userData = await getUser(1); // Default user ID
+      console.log('ChatHeader: Loading user data:', userData);
+      setUser(userData);
+    } catch (error) {
+      console.log('Error loading user for header:', error);
+    }
   }, []);
+
+  // Load user data on component mount
+  useEffect(() => {
+    loadUser();
+  }, [loadUser]);
+
+  // Reload user data when screen comes into focus (when returning from profile)
+  useFocusEffect(
+    useCallback(() => {
+      console.log('ChatHeader: Screen focused, reloading user data');
+      loadUser();
+    }, [loadUser])
+  );
 
   const handleProfilePress = () => {
     router.push('/user');
@@ -69,8 +80,9 @@ export default function ChatHeader() {
           style={styles.profileImage}
         />
         <View style={styles.userInfo}>
-          <Text style={styles.userName}>{user?.name || 'MenteE'}</Text>
-          <Text style={styles.userStatus}>{formatLastSeen(user?.lastSeen)}</Text>
+          <Text style={styles.userName}>{user?.name || 'Thoughts'}</Text>
+          <Text style={styles.userInfo}>{user?.about || 'Your Thoughts'}</Text>
+          {/* <Text style={styles.userStatus}>{formatLastSeen(user?.lastSeen)}</Text> */}
         </View>
       </TouchableOpacity>
 

@@ -20,7 +20,7 @@ function UserProfile({
   name, 
   about, 
   profileImage,
-  phone = '+1 (555) 123-4567',
+  phone = '+92 346 0561173',
   lastSeen,
   onNameChange,
   onAboutChange,
@@ -115,6 +115,42 @@ function UserProfile({
     setIsEditingInfo2(false);
   };
 
+  // Format lastSeen for profile display
+  const formatLastSeenForProfile = (lastSeen: string) => {
+    if (!lastSeen) return 'Never';
+    
+    try {
+      const lastSeenDate = new Date(lastSeen);
+      const now = new Date();
+      const diffInMinutes = Math.floor((now.getTime() - lastSeenDate.getTime()) / (1000 * 60));
+      
+      if (diffInMinutes < 1) {
+        return '🟢 Online now';
+      } else if (diffInMinutes < 5) {
+        return '🟢 Online';
+      } else if (diffInMinutes < 60) {
+        return `🟡 ${diffInMinutes} minute${diffInMinutes > 1 ? 's' : ''} ago`;
+      } else if (diffInMinutes < 1440) { // Less than 24 hours
+        const hours = Math.floor(diffInMinutes / 60);
+        return `🟡 ${hours} hour${hours > 1 ? 's' : ''} ago`;
+      } else if (diffInMinutes < 2880) { // Less than 48 hours
+        return '🔴 Yesterday';
+      } else if (diffInMinutes < 10080) { // Less than 7 days
+        const days = Math.floor(diffInMinutes / 1440);
+        return `🔴 ${days} day${days > 1 ? 's' : ''} ago`;
+      } else {
+        // Show formatted date for older timestamps
+        return `🔴 ${lastSeenDate.toLocaleDateString([], {
+          month: 'short',
+          day: 'numeric',
+          year: lastSeenDate.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+        })}`;
+      }
+    } catch (error) {
+      return 'Unknown';
+    }
+  };
+
   return (
     <View style={styles.container}>
       {/* Profile Picture */}
@@ -144,6 +180,7 @@ function UserProfile({
               onSubmitEditing={handleNameSave}
               onBlur={handleNameSave}
               placeholder="Enter your name"
+              placeholderTextColor="#666"
             />
             <TouchableOpacity onPress={handleNameSave} style={styles.saveButton}>
               <Text style={styles.saveButtonText}>Save</Text>
@@ -178,6 +215,7 @@ function UserProfile({
               multiline
               onBlur={handleAboutSave}
               placeholder="Add about info"
+              placeholderTextColor="#666"
             />
             <TouchableOpacity onPress={handleAboutSave} style={styles.saveButton}>
               <Text style={styles.saveButtonText}>Save</Text>
@@ -185,7 +223,7 @@ function UserProfile({
           </View>
         ) : (
           <View style={styles.infoRow}>
-            <Text style={styles.infoText}>{about || 'Hey there! I am using Thoughts.'}</Text>
+            <Text style={styles.infoText}>{about || 'Your Thoughts'}</Text>
             <TouchableOpacity 
               onPress={() => {
                 setIsEditingAbout(true);
@@ -213,6 +251,7 @@ function UserProfile({
               onSubmitEditing={handlePhoneSave}
               onBlur={handlePhoneSave}
               placeholder="Enter phone number"
+              placeholderTextColor="#666"
             />
             <TouchableOpacity onPress={handlePhoneSave} style={styles.saveButton}>
               <Text style={styles.saveButtonText}>Save</Text>
@@ -234,12 +273,12 @@ function UserProfile({
         )}
       </View>
 
-      {/* Status Section */}
+      {/* Last Seen Section */}
       {lastSeen && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>LAST SEEN</Text>
           <View style={styles.infoRow}>
-            <Text style={styles.infoText}>{lastSeen}</Text>
+            <Text style={styles.lastSeenText}>{formatLastSeenForProfile(lastSeen)}</Text>
           </View>
         </View>
       )}
@@ -258,6 +297,7 @@ function UserProfile({
               autoFocus
               onSubmitEditing={handleInfo1Save}
               onBlur={handleInfo1Save}
+              placeholderTextColor="#666"
             />
             <TouchableOpacity onPress={handleInfo1Save} style={styles.saveButton}>
               <Text style={styles.saveButtonText}>Save</Text>
@@ -285,6 +325,7 @@ function UserProfile({
               autoFocus
               onSubmitEditing={handleInfo2Save}
               onBlur={handleInfo2Save}
+              placeholderTextColor="#666"
             />
             <TouchableOpacity onPress={handleInfo2Save} style={styles.saveButton}>
               <Text style={styles.saveButtonText}>Save</Text>
@@ -308,7 +349,7 @@ function UserProfile({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#1a1a1a', // Dark background
     padding: 16,
     flex: 1,
   },
@@ -322,15 +363,15 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 60,
     borderWidth: 3,
-    borderColor: '#fff',
+    borderColor: '#333', // Dark border
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.5,
     shadowRadius: 4,
     elevation: 3,
   },
   editImageButton: {
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(255,255,255,0.2)', // Light overlay on dark
     position: 'absolute',
     bottom: 5,
     paddingHorizontal: 12,
@@ -343,19 +384,19 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   section: {
-    backgroundColor: '#fff',
+    backgroundColor: '#2a2a2a', // Dark section background
     marginBottom: 16,
     padding: 16,
     borderRadius: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.3,
     shadowRadius: 2,
-    elevation: 1,
+    elevation: 2,
   },
   sectionTitle: {
     fontSize: 12,
-    color: '#666',
+    color: '#888', // Light gray for section titles
     marginBottom: 8,
     fontWeight: '600',
   },
@@ -367,8 +408,14 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontSize: 16,
-    color: '#000',
+    color: '#fff', // White text
     flex: 1,
+  },
+  lastSeenText: {
+    fontSize: 16,
+    color: '#fff', // White text
+    flex: 1,
+    fontWeight: '500',
   },
   editIcon: {
     padding: 8,
@@ -384,9 +431,10 @@ const styles = StyleSheet.create({
   editInput: {
     flex: 1,
     fontSize: 16,
-    color: '#000',
+    color: '#fff', // White text in input
+    backgroundColor: '#333', // Dark input background
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#555', // Darker border
     borderRadius: 4,
     paddingHorizontal: 8,
     paddingVertical: 6,
@@ -397,7 +445,7 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   saveButton: {
-    backgroundColor: '#075e54',
+    backgroundColor: '#0d7377', // Darker teal for save button
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 4,

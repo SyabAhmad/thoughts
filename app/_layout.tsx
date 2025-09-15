@@ -1,10 +1,12 @@
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { createUser, getUser, initDatabase } from '@/services/DatabaseService';
+import { createUser, getUser, initStorage } from '@/services/AsyncStorageService'; // ✅ Using AsyncStorage
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
+import { KeyboardAvoidingView, Platform } from 'react-native';
 import 'react-native-reanimated';
+
 export const unstable_settings = {
   anchor: '(tabs)',
 };
@@ -12,18 +14,22 @@ export const unstable_settings = {
 export default function RootLayout() {
   const colorScheme = useColorScheme();
 
-  // Initialize database on app start
+  // Initialize AsyncStorage on app start
   useEffect(() => {
     const setupDatabase = async () => {
       try {
-        await initDatabase();
+        console.log('🚀 Initializing AsyncStorage...');
+        await initStorage();
         // Ensure default user exists
         const user = await getUser(1);
         if (!user) {
           await createUser('MenteE', 'Beloved MenteE', '🫀', 'https://i.pravatar.cc/150?img=5');
+          console.log('✅ Default user created in AsyncStorage');
+        } else {
+          console.log('✅ User already exists in AsyncStorage:', user);
         }
       } catch (error) {
-        console.error('Database initialization error:', error);
+        console.error('❌ AsyncStorage initialization error:', error);
       }
     };
 
@@ -32,32 +38,33 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack
-        screenOptions={{
-          headerShown: false, // Hide the header completely
-          // Or if you want to keep the header but remove the route display:
-          // headerTitle: (props) => {
-          //   // Custom header title component that doesn't show the route
-          //   return props.children;
-          // },
-        }}
-        initialRouteName="index"
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }} 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={0}
       >
-        <Stack.Screen
-          name="index"
-          options={{
+        <Stack
+          screenOptions={{
             headerShown: false,
           }}
-        />
-        <Stack.Screen
-          name="user/index"
-          options={{
-            headerShown: true,
-            headerTitle: 'Profile',
-            presentation: 'modal',
-          }}
-        />
-      </Stack>
+          initialRouteName="index"
+        >
+          <Stack.Screen
+            name="index"
+            options={{
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="user/index"
+            options={{
+              headerShown: true,
+              headerTitle: 'Profile',
+              presentation: 'modal',
+            }}
+          />
+        </Stack>
+      </KeyboardAvoidingView>
       <StatusBar style="auto" />
     </ThemeProvider>
   );

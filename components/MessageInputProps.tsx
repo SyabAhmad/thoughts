@@ -26,7 +26,7 @@ export default function MessageInput({ onSend, onVoiceRecord }: MessageInputProp
     <View style={styles.container}>
       <View style={styles.inputContainer}>
         <TouchableOpacity style={styles.attachButton}>
-          <MaterialCommunityIcons name="plus-circle-outline" size={24} color="#666" />
+          <MaterialCommunityIcons name="plus-circle-outline" size={24} color="#fff" />
         </TouchableOpacity>
         
         <TextInput
@@ -34,13 +34,14 @@ export default function MessageInput({ onSend, onVoiceRecord }: MessageInputProp
           value={message}
           onChangeText={setMessage}
           placeholder="Type a message"
+          placeholderTextColor="#888"
           multiline
           maxLength={1000}
         />
         
         {message.length > 0 ? (
           <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
-            <MaterialCommunityIcons name="send" size={24} color="#075e54" />
+            <MaterialCommunityIcons name="send" size={24} color="#0d7377" />
           </TouchableOpacity>
         ) : (
           <TouchableOpacity 
@@ -48,7 +49,7 @@ export default function MessageInput({ onSend, onVoiceRecord }: MessageInputProp
             onPress={handleVoicePress}
             onLongPress={handleVoicePress}
           >
-            <MaterialCommunityIcons name="microphone" size={24} color="#666" />
+            <MaterialCommunityIcons name="microphone" size={24} color="#fff" />
           </TouchableOpacity>
         )}
       </View>
@@ -58,24 +59,26 @@ export default function MessageInput({ onSend, onVoiceRecord }: MessageInputProp
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#e5ddd5',
+    backgroundColor: '#2a2a2a',
     paddingHorizontal: 10,
     paddingVertical: 8,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    borderTopColor: '#444', // Darker border for dark theme
     position: 'relative',
     bottom: 0,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    backgroundColor: '#fff',
+    backgroundColor: '#333', // Darker background for input container
     borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#fff', // White border for text input container
     paddingHorizontal: 12,
     paddingVertical: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.3,
     shadowRadius: 2,
     elevation: 2,
   },
@@ -86,6 +89,7 @@ const styles = StyleSheet.create({
   textInput: {
     flex: 1,
     fontSize: 16,
+    color: '#fff', // White text
     maxHeight: 100,
     paddingTop: 8,
     paddingBottom: 8,

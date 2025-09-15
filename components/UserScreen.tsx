@@ -108,8 +108,8 @@ export default function UserScreen({ userId = 1 }) {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#075e54" />
-        <Text style={{ marginTop: 10 }}>Loading profile...</Text>
+        <ActivityIndicator size="large" color="#0d7377" />
+        <Text style={styles.loadingText}>Loading profile...</Text>
       </View>
     );
   }
@@ -117,7 +117,7 @@ export default function UserScreen({ userId = 1 }) {
   if (!user) {
     return (
       <View style={styles.center}>
-        <Text>User not found</Text>
+        <Text style={styles.errorText}>User not found</Text>
       </View>
     );
   }
@@ -127,15 +127,15 @@ export default function UserScreen({ userId = 1 }) {
   return (
     <View style={styles.container}>
       <StatusBar 
-        backgroundColor="white" 
-        barStyle="dark-content" 
+        backgroundColor="#1a1a1a" 
+        barStyle="light-content" 
       />
       <UserProfile
-        name={user.name || 'Your Name'}
-        about={user.about || 'Hey there! I am using Thoughts.'}
-        profileImage={user.profileImage || 'https://i.pravatar.cc/150?img=12'}
-        phone={user.subtitle || '+1 (555) 123-4567'}
-        lastSeen={user.lastSeen || 'Today at 10:30 AM'}
+        name={user.name || 'Thoughts'}
+        about={user.about || 'Your Thoughts'}
+        profileImage={user.profileImage || 'https://i.pravatar.cc/150?img=2'}
+        phone={user.subtitle || '+92 346 0561173'}
+        lastSeen={user.lastSeen || 'Just now'}
         onNameChange={handleUpdateName}
         onAboutChange={handleUpdateAbout}
         onPhoneChange={handleUpdatePhone}
@@ -146,6 +146,23 @@ export default function UserScreen({ userId = 1 }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  container: { 
+    flex: 1, 
+    backgroundColor: '#1a1a1a' // Dark background
+  },
+  center: { 
+    flex: 1, 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    backgroundColor: '#1a1a1a' // Dark background for loading/error states
+  },
+  loadingText: {
+    marginTop: 10,
+    color: '#fff', // White text
+    fontSize: 16,
+  },
+  errorText: {
+    color: '#ff6b6b', // Light red for errors
+    fontSize: 16,
+  },
 });

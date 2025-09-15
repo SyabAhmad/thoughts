@@ -191,7 +191,8 @@ const styles = StyleSheet.create({
   },
   outgoingMessage: {
     alignSelf: 'flex-end',
-    backgroundColor: '#dcf8c6', // WhatsApp green bubble
+    backgroundColor: '#075e54', // WhatsApp green bubble
+    // backgroundColor: '#dcf8c6', // WhatsApp green bubble
     borderTopRightRadius: 4,
   },
   incomingMessage: {
@@ -204,7 +205,7 @@ const styles = StyleSheet.create({
     color: '#000',
   },
   outgoingText: {
-    color: '#000',
+    color: '#FFFF',
   },
   incomingText: {
     color: '#000',
@@ -217,11 +218,11 @@ const styles = StyleSheet.create({
   },
   timestamp: {
     fontSize: 12,
-    color: '#7e7e7e',
+    color: '#FFFF',
     marginRight: 4,
   },
   outgoingTimestamp: {
-    color: '#7e7e7e',
+    color: '#c2bdbdff',
   },
   incomingTimestamp: {
     color: '#7e7e7e',

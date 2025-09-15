@@ -159,6 +159,20 @@ export const updateUser = async (
   }
 };
 
+// ✅ Fixed: Make sure getAllMessages is properly exported
+export const getAllMessages = async (): Promise<Message[]> => {
+  try {
+    console.log('📱 Getting all messages from AsyncStorage');
+    const messages = await getStoredMessages();
+    console.log('📱 Retrieved messages:', messages.length);
+    return messages;
+  } catch (error) {
+    console.error('Error getting all messages:', error);
+    return [];
+  }
+};
+
+
 // Message operations
 export const saveMessage = async (
   text: string,
