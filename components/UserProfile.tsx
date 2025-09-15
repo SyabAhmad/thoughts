@@ -1,7 +1,7 @@
 // components/UserProfile.tsx
 import * as ImagePicker from 'expo-image-picker';
 import React, { useEffect, useState } from 'react';
-import { Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Image, Linking, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 interface UserProfileProps {
   name: string;
@@ -32,15 +32,11 @@ function UserProfile({
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingAbout, setIsEditingAbout] = useState(false);
   const [isEditingPhone, setIsEditingPhone] = useState(false);
-  const [isEditingInfo1, setIsEditingInfo1] = useState(false);
-  const [isEditingInfo2, setIsEditingInfo2] = useState(false);
   
   // Edit values - sync with props
   const [editedName, setEditedName] = useState(name);
   const [editedAbout, setEditedAbout] = useState(about);
   const [editedPhone, setEditedPhone] = useState(phone);
-  const [editedInfo1, setEditedInfo1] = useState('📱 Mobile');
-  const [editedInfo2, setEditedInfo2] = useState('⏰ Tap to view all services');
 
   // Update local state when props change
   useEffect(() => {
@@ -54,6 +50,20 @@ function UserProfile({
   useEffect(() => {
     setEditedPhone(phone);
   }, [phone]);
+
+  // Handle portfolio link
+  const handlePortfolioPress = async () => {
+    try {
+      const supported = await Linking.canOpenURL('https://syab.tech');
+      if (supported) {
+        await Linking.openURL('https://syab.tech');
+      } else {
+        console.log("Don't know how to open URI: https://syab.tech");
+      }
+    } catch (error) {
+      console.error('Error opening portfolio link:', error);
+    }
+  };
 
   // Handle image selection
   const handlePickImage = async () => {
@@ -99,20 +109,6 @@ function UserProfile({
       onPhoneChange(editedPhone.trim());
     }
     setIsEditingPhone(false);
-  };
-
-  const handleInfo1Save = () => {
-    if (onInfoChange) {
-      onInfoChange(0, editedInfo1);
-    }
-    setIsEditingInfo1(false);
-  };
-
-  const handleInfo2Save = () => {
-    if (onInfoChange) {
-      onInfoChange(1, editedInfo2);
-    }
-    setIsEditingInfo2(false);
   };
 
   // Format lastSeen for profile display
@@ -283,71 +279,35 @@ function UserProfile({
         </View>
       )}
 
-      {/* Additional Info */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>INFO</Text>
-        
-        {/* Info Item 1 */}
-        {isEditingInfo1 ? (
-          <View style={styles.editContainer}>
-            <TextInput
-              style={styles.editInput}
-              value={editedInfo1}
-              onChangeText={setEditedInfo1}
-              autoFocus
-              onSubmitEditing={handleInfo1Save}
-              onBlur={handleInfo1Save}
-              placeholderTextColor="#666"
-            />
-            <TouchableOpacity onPress={handleInfo1Save} style={styles.saveButton}>
-              <Text style={styles.saveButtonText}>Save</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <View style={styles.infoRow}>
-            <Text style={styles.infoText}>{editedInfo1}</Text>
-            <TouchableOpacity 
-              onPress={() => setIsEditingInfo1(true)}
-              style={styles.editIcon}
-            >
-              <Text style={styles.editIconText}>✏️</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-        
-        {/* Info Item 2 */}
-        {isEditingInfo2 ? (
-          <View style={styles.editContainer}>
-            <TextInput
-              style={styles.editInput}
-              value={editedInfo2}
-              onChangeText={setEditedInfo2}
-              autoFocus
-              onSubmitEditing={handleInfo2Save}
-              onBlur={handleInfo2Save}
-              placeholderTextColor="#666"
-            />
-            <TouchableOpacity onPress={handleInfo2Save} style={styles.saveButton}>
-              <Text style={styles.saveButtonText}>Save</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <View style={styles.infoRow}>
-            <Text style={styles.infoText}>{editedInfo2}</Text>
-            <TouchableOpacity 
-              onPress={() => setIsEditingInfo2(true)}
-              style={styles.editIcon}
-            >
-              <Text style={styles.editIconText}>✏️</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+      {/* Simple Developer Credits */}
+      <View style={styles.creditsSection}>
+        <Text style={styles.creditsTitle}>DEVELOPER</Text>
+        <View style={styles.creditsContent}>
+          <TouchableOpacity onPress={handlePortfolioPress}>
+            <Text style={styles.developerName}>Syed Syab Ahmad</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Company Credits - Centered */}
+      <View style={styles.creditsSection2}>
+        <Text style={styles.companyName}>MenteE™</Text>
+        <Text style={styles.copyrightText}>
+          © MenteE™ 2025. All rights reserved.
+        </Text>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  portfolio:{
+    color: '#0d7377',
+    textDecorationLine: 'underline',
+    fontSize: 14,
+    fontWeight: '500',
+
+  },
   container: {
     backgroundColor: '#1a1a1a', // Dark background
     padding: 16,
@@ -454,6 +414,53 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
+  },
+  
+  // Simple Developer Credits
+  creditsSection: {
+    backgroundColor: '#2a2a2a',
+    marginBottom: 16,
+    padding: 16,
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  creditsTitle: {
+    fontSize: 12,
+    color: '#888',
+    marginBottom: 8,
+    fontWeight: '600',
+  },
+  creditsContent: {
+    paddingVertical: 8,
+  },
+  developerName: {
+    fontSize: 16,
+    color: '#0d7377', // Changed to teal color to indicate it's clickable
+    fontWeight: '600',
+    marginBottom: 4,
+    textDecorationLine: 'underline', // Added underline to show it's a link
+  },
+  companyName: {
+    fontSize: 14,
+    color: '#0d7377',
+    fontWeight: '500',
+    textAlign: 'center', // Centered
+  },
+  creditsSection2: {
+    alignItems: 'center', // Center align
+    justifyContent: 'center', // Center justify
+    marginBottom: 16,
+    padding: 16,
+  },
+  copyrightText: {
+    color: '#888', 
+    marginTop: 8, 
+    fontSize: 12,
+    textAlign: 'center', // Centered
   },
 });
 

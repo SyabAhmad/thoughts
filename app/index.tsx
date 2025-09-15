@@ -2,8 +2,9 @@
 import ChatHeader from '@/components/ChatHeader';
 import ChatMessage from '@/components/ChatMessageProps';
 import MessageInput from '@/components/MessageInputProps';
-import { deleteMessage, getAllMessages, getDatabaseInfo, initStorage, MESSAGE_STATUS, onMessageStatusChange, sendMessage } from '@/services/AsyncStorageService'; // ✅ Using AsyncStorage
+import { deleteMessage, getAllMessages, getDatabaseInfo, initStorage, MESSAGE_STATUS, onMessageStatusChange, sendMessage } from '@/services/AsyncStorageService';
 import { Audio } from 'expo-av';
+import * as Haptics from 'expo-haptics';
 import { useEffect, useRef, useState } from 'react';
 import { FlatList, StatusBar, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,7 +18,7 @@ export default function HomeScreen() {
   useEffect(() => {
     const checkDatabase = async () => {
       const dbInfo = getDatabaseInfo();
-      console.log('📱 Storage Info:', dbInfo); // Should show "AsyncStorage"
+      console.log('📱 Storage Info:', dbInfo);
       
       await initStorage();
       console.log('✅ AsyncStorage initialized - data will persist!');
@@ -59,6 +60,46 @@ export default function HomeScreen() {
     }
   };
 
+  const playMessageFeedback = async () => {
+    try {
+      // Try haptic feedback first
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      console.log('✅ Haptic feedback played');
+    } catch (hapticError) {
+      console.log('❌ Haptic not available');
+    }
+
+    try {
+      // Also play a very soft sound
+      const { sound } = await Audio.Sound.createAsync(
+        // Using a short pop sound URL
+        { uri: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.wav' },
+        { 
+          volume: 0.1, // Very quiet
+          shouldPlay: true,
+          isLooping: false,
+        }
+      );
+      
+      await Audio.setAudioModeAsync({
+        playsInSilentModeIOS: false, // Respect silent mode
+        staysActiveInBackground: false,
+        shouldDuckAndroid: true,
+      });
+      
+      await sound.playAsync();
+      console.log('✅ Sound feedback played');
+      
+      // Quick cleanup
+      setTimeout(() => {
+        sound.unloadAsync();
+      }, 100);
+      
+    } catch (soundError) {
+      console.log('❌ Sound not available:', soundError);
+    }
+  };
+
   const handleSend = async (text: string) => {
     if (!text?.trim()) return;
 
@@ -73,11 +114,11 @@ export default function HomeScreen() {
     };
 
     setMessages(prev => [...prev, optimisticMessage]);
-    playMessageSound();
+    playMessageFeedback(); // Both haptic and sound
     
     try {
       console.log('📱 Sending message via AsyncStorage...');
-      const result = await sendMessage(text, 1); // ✅ Using AsyncStorage
+      const result = await sendMessage(text, 1);
       
       setMessages(prev =>
         prev.map(m => {
@@ -107,7 +148,7 @@ export default function HomeScreen() {
         return;
       }
       
-      const success = await deleteMessage(messageId); // ✅ Using AsyncStorage
+      const success = await deleteMessage(messageId);
       console.log(`✅ Delete operation success: ${success}`);
       
       if (success) {
@@ -127,23 +168,6 @@ export default function HomeScreen() {
 
   const handleVoiceRecord = () => {
     console.log('Voice recording started');
-  };
-
-  const playMessageSound = async () => {
-    try {
-      const { sound } = await Audio.Sound.createAsync(
-        { uri: 'https://soundbible.com/mp3/Click2-Sebastian-759472264.mp3' },
-        { volume: 0.5 }
-      );
-      
-      await sound.playAsync();
-      
-      setTimeout(() => {
-        sound.unloadAsync();
-      }, 1000);
-    } catch (error) {
-      console.log('Error playing sound, continuing without sound');
-    }
   };
 
   return (

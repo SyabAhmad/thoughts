@@ -128,6 +128,7 @@ const styles = StyleSheet.create({
   },
   userInfo: {
     flex: 1,
+    color: '#fff',
   },
   userName: {
     fontSize: 18,
